@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colección</title>
+<style>
+  :root {
+    --paper: #f4f1ea;
+    --ink: #1c1a17;
+    --stamp: #b7402f;
+    --stamp-dim: #d9c9c2;
+    --owned: #3e6b52;
+    --gray: #8a8478;
+    --line: #ded6c6;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header {
+    padding: 28px 20px 18px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  header p {
+    margin: 4px 0 0;
+    color: var(--gray);
+    font-size: 0.85rem;
+  }
+
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* --- Add manga form --- */
+  #add-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  #add-form input {
+    font: inherit;
+    padding: 10px 12px;
+    border: 2px solid var(--ink);
+    background: var(--paper);
+    border-radius: 2px;
+  }
+
+  #add-form input[name="name"] { flex: 1; min-width: 160px; }
+  #add-form input[name="volume_count"] { width: 90px; }
+
+  #add-form button {
+    font: inherit;
+    font-weight: 700;
+    padding: 10px 18px;
+    background: var(--ink);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  #add-form button:hover { background: var(--stamp); border-color: var(--stamp); }
+
+  #status {
+    font-size: 0.8rem;
+    color: var(--gray);
+    min-height: 1em;
+    margin-bottom: 10px;
+  }
+
+  /* --- Grid of manga --- */
+  #manga-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+  }
+
+  .manga-tile {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    border: 2px solid var(--ink);
+    border-radius: 3px;
+    padding: 10px;
+    background: #fffdf8;
+    cursor: pointer;
+    text-align: left;
+  }
+  .manga-tile:hover { border-color: var(--stamp); }
+
+  .manga-cover {
+    width: 56px;
+    height: 80px;
+    flex-shrink: 0;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--stamp-dim) url('') center/cover no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: var(--ink);
+    overflow: hidden;
+  }
+  .manga-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .manga-info { min-width: 0; }
+
+  .manga-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    margin: 0 0 6px;
+    word-break: break-word;
+  }
+
+  .manga-owned-count {
+    font-size: 0.78rem;
+    color: var(--gray);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- Modal --- */
+  #modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(28, 26, 23, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 10;
+  }
+  #modal-backdrop.open { display: flex; }
+
+  #modal {
+    background: var(--paper);
+    width: 100%;
+    max-width: 520px;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    border: 2px solid var(--ink);
+    padding: 18px 18px 24px;
+  }
+
+  #modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+
+  #modal-title { font-size: 1.2rem; font-weight: 800; margin: 0; }
+
+  #modal-close {
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--gray);
+    padding: 4px;
+  }
+
+  #modal-progress {
+    font-size: 0.82rem;
+    color: var(--gray);
+    margin-bottom: 14px;
+  }
+
+  .volumes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* each volume drawn like a little book spine */
+  .volume {
+    width: 34px;
+    height: 46px;
+    border: 2px solid var(--ink);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--stamp-dim);
+    color: var(--ink);
+    transition: transform 0.08s ease;
+    user-select: none;
+  }
+  .volume:active { transform: scale(0.92); }
+
+  .volume.owned {
+    background: var(--owned);
+    border-color: var(--owned);
+    color: var(--paper);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Colección</h1>
+  <p>Apretar el manga para abrir la lista de volumenes, seleccioná un boton para marcar el volumen como comprado (o desmarcarlo)</p>
+</header>
+
+<main>
+  <form id="add-form">
+    <input type="text" name="name" placeholder="Series name" required>
+    <input type="number" name="volume_count" placeholder="Vols" min="1" required>
+    <button type="submit">Add</button>
+  </form>
+
+  <div id="status"></div>
+  <div id="manga-grid"></div>
+</main>
+
+<div id="modal-backdrop">
+  <div id="modal">
+    <div id="modal-header">
+      <h2 id="modal-title"></h2>
+      <button id="modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div id="modal-progress"></div>
+    <div id="modal-volumes" class="volumes"></div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = "http://localhost:3000";
+
+  const gridEl = document.getElementById("manga-grid");
+  const statusEl = document.getElementById("status");
+  const formEl = document.getElementById("add-form");
+
+  const backdropEl = document.getElementById("modal-backdrop");
+  const modalTitleEl = document.getElementById("modal-title");
+  const modalProgressEl = document.getElementById("modal-progress");
+  const modalVolumesEl = document.getElementById("modal-volumes");
+  const modalCloseEl = document.getElementById("modal-close");
+
+  let currentManga = null; // the manga object currently open in the modal
+
+  function setStatus(msg, isError = false) {
+    statusEl.textContent = msg;
+    statusEl.style.color = isError ? "var(--stamp)" : "var(--gray)";
+  }
+
+  async function fetchAllManga() {
+    const res = await fetch(`${API_BASE}/manga`);
+    if (!res.ok) throw new Error(`Failed to load (${res.status})`);
+    return res.json();
+  }
+
+  async function createManga(name, volumeCount) {
+    const res = await fetch(`${API_BASE}/manga/create`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, volume_count: volumeCount }),
+    });
+    if (!res.ok) throw new Error(`Failed to create (${res.status})`);
+    return res.json();
+  }
+
+  async function setVolumeOwned(mangaId, volume, state) {
+    const res = await fetch(`${API_BASE}/manga/update/${mangaId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ volume, state }),
+    });
+    if (!res.ok) throw new Error(`Failed to update (${res.status})`);
+  }
+
+  // --- Grid tile ---
+
+  function renderTile(manga) {
+    const tile = document.createElement("button");
+    tile.className = "manga-tile";
+    tile.type = "button";
+
+    const cover = document.createElement("div");
+    cover.className = "manga-cover";
+    if (manga.cover_image_path) {
+      const img = document.createElement("img");
+      img.src = `${API_BASE}/covers/${manga.cover_image_path}`;
+      img.alt = "";
+      cover.appendChild(img);
+    } else {
+      cover.textContent = manga.name.charAt(0).toUpperCase();
+    }
+
+    const info = document.createElement("div");
+    info.className = "manga-info";
+    info.innerHTML = `
+      <p class="manga-title">${manga.name}</p>
+      <p class="manga-owned-count">Volumenes Comprados: ${manga.owned_volumes.length}</p>
+    `;
+
+    tile.appendChild(cover);
+    tile.appendChild(info);
+    tile.addEventListener("click", () => openModal(manga));
+    return tile;
+  }
+
+  // --- Modal ---
+
+  function openModal(manga) {
+    currentManga = manga;
+    modalTitleEl.textContent = manga.name;
+    updateModalProgress();
+
+    modalVolumesEl.innerHTML = "";
+    for (let v = 1; v <= manga.volume_count; v++) {
+      const owned = manga.owned_volumes.includes(v);
+      const vEl = document.createElement("div");
+      vEl.className = "volume" + (owned ? " owned" : "");
+      vEl.textContent = v;
+      vEl.addEventListener("click", () => onToggleVolume(v, vEl));
+      modalVolumesEl.appendChild(vEl);
+    }
+
+    backdropEl.classList.add("open");
+  }
+
+  function closeModal() {
+    backdropEl.classList.remove("open");
+    currentManga = null;
+  }
+
+  function updateModalProgress() {
+    modalProgressEl.textContent =
+      `${currentManga.owned_volumes.length} / ${currentManga.volume_count} owned`;
+  }
+
+  async function onToggleVolume(volumeNumber, vEl) {
+    const manga = currentManga;
+    const newState = !vEl.classList.contains("owned");
+    vEl.classList.toggle("owned", newState); // optimistic UI update
+
+    try {
+      await setVolumeOwned(manga.id, volumeNumber, newState);
+
+      if (newState) {
+        manga.owned_volumes.push(volumeNumber);
+      } else {
+        manga.owned_volumes = manga.owned_volumes.filter(v => v !== volumeNumber);
+      }
+      updateModalProgress();
+
+      // keep the grid tile's count in sync for when the modal closes
+      const tileCountEl = [...gridEl.children]
+        .find(t => t.dataset.mangaId == manga.id)
+        ?.querySelector(".manga-owned-count");
+      if (tileCountEl) tileCountEl.textContent = `Volumes owned: ${manga.owned_volumes.length}`;
+    } catch (err) {
+      vEl.classList.toggle("owned", !newState); // revert on failure
+      setStatus(err.message, true);
+    }
+  }
+
+  modalCloseEl.addEventListener("click", closeModal);
+  backdropEl.addEventListener("click", (e) => {
+    if (e.target === backdropEl) closeModal();
+  });
+
+  // --- Load + add ---
+
+  async function loadAndRender() {
+    setStatus("Loading…");
+    try {
+      const mangas = await fetchAllManga();
+      gridEl.innerHTML = "";
+      mangas.forEach(m => {
+        const tile = renderTile(m);
+        tile.dataset.mangaId = m.id;
+        gridEl.appendChild(tile);
+      });
+      setStatus("");
+    } catch (err) {
+      setStatus(err.message, true);
+    }
+  }
+
+  formEl.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = formEl.name.value.trim();
+    const volumeCount = parseInt(formEl.volume_count.value, 10);
+    if (!name || !volumeCount) return;
+
+    setStatus("Adding…");
+    try {
+      await createManga(name, volumeCount);
+      formEl.reset();
+      await loadAndRender();
+    } catch (err) {
+      setStatus(err.message, true);
+    }
+  });
+
+  loadAndRender();
+</script>
+
+</body>
+</html>
