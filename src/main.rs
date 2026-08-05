@@ -1,5 +1,6 @@
 // Dependencies/libraries loaded
 
+use tower_http::services::ServeFile;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 use axum::{routing::get, routing::post,Router,};
 use std::sync::{Arc, Mutex};
@@ -26,6 +27,8 @@ async fn main() {
     .route("/manga/update/{id}", post(api::update_volume))
     .route("/manga", get(api::get_all_manga))
     .nest_service("/covers", ServeDir::new("covers"))
+    .route_service("/", ServeFile::new("frontend/index.html"))
+    .route_service("/app.js", ServeFile::new("frontend/app.js"))
     .layer(CorsLayer::permissive())
     .with_state(shared_conn);
 

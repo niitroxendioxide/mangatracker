@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colección</title>
+<style>
+  :root {
+    --paper: #f4f1ea;
+    --ink: #1c1a17;
+    --stamp: #b7402f;
+    --stamp-dim: #d9c9c2;
+    --owned: #3e6b52;
+    --gray: #8a8478;
+    --line: #ded6c6;
+    --precio: #92d13b;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header {
+    padding: 28px 20px 18px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  header p {
+    margin: 4px 0 0;
+    color: var(--gray);
+    font-size: 0.85rem;
+  }
+
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* --- Add manga form --- */
+  #add-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  #add-form input {
+    font: inherit;
+    padding: 10px 12px;
+    border: 2px solid var(--ink);
+    background: var(--paper);
+    border-radius: 2px;
+  }
+
+  #add-form input[name="name"] { flex: 1; min-width: 160px; }
+  #add-form input[name="volume_count"] { width: 90px; }
+
+  #add-form button {
+    font: inherit;
+    font-weight: 700;
+    padding: 10px 18px;
+    background: var(--ink);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  #add-form button:hover { background: var(--stamp); border-color: var(--stamp); }
+
+  #status {
+    font-size: 0.8rem;
+    color: var(--gray);
+    min-height: 1em;
+    margin-bottom: 10px;
+  }
+
+  /* --- Grid of manga --- */
+  #manga-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+  }
+
+  .manga-tile {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    border: 2px solid var(--ink);
+    border-radius: 3px;
+    padding: 10px;
+    background: #fffdf8;
+    cursor: pointer;
+    text-align: left;
+  }
+  .manga-tile:hover { border-color: var(--stamp); }
+
+  .manga-cover {
+    width: 56px;
+    height: 80px;
+    flex-shrink: 0;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--stamp-dim) url('') center/cover no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    color: var(--ink);
+    overflow: hidden;
+  }
+  .manga-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .manga-info { min-width: 0; }
+
+  .manga-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    margin: 0 0 6px;
+    word-break: break-word;
+  }
+
+  .manga-owned-count {
+    font-size: 0.78rem;
+    color: var(--gray);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .price {
+    color: var(--precio);
+    font-weight: bold;
+    -webkit-text-stroke: 1px rgb(87, 146, 38);
+  }
+
+  /* --- Modal --- */
+  #modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(28, 26, 23, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 10;
+  }
+  #modal-backdrop.open { display: flex; }
+
+  #modal {
+    background: var(--paper);
+    width: 100%;
+    max-width: 520px;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    border: 2px solid var(--ink);
+    padding: 18px 18px 24px;
+  }
+
+  #modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+
+  #modal-title { font-size: 1.2rem; font-weight: 800; margin: 0; }
+
+  #modal-close {
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--gray);
+    padding: 4px;
+  }
+
+  #modal-progress {
+    font-size: 0.82rem;
+    color: var(--gray);
+    margin-bottom: 14px;
+  }
+
+  .volumes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* each volume drawn like a little book spine */
+  .volume {
+    width: 34px;
+    height: 46px;
+    border: 2px solid var(--ink);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--stamp-dim);
+    color: var(--ink);
+    transition: transform 0.08s ease;
+    user-select: none;
+  }
+  .volume:active { transform: scale(0.92); }
+
+  .volume.owned {
+    background: var(--owned);
+    border-color: var(--owned);
+    color: var(--paper);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Colección</h1>
+  <p>Apretar el manga para abrir la lista de volumenes, seleccioná un boton para marcar el volumen como comprado (o desmarcarlo)</p>
+</header>
+
+<main>
+  <form id="add-form">
+    <input type="text" name="name" placeholder="Nombre del Manga" required>
+    <input type="number" name="volume_count" placeholder="Cant." min="1" required>
+    <input type="number" name="last_price" placeholder="Precio" min="1000" required>
+    <button type="submit">Agregar</button>
+  </form>
+
+  <div id="status"></div>
+  <div id="manga-grid"></div>
+</main>
+
+<div id="modal-backdrop">
+  <div id="modal">
+    <div id="modal-header">
+      <h2 id="modal-title"></h2>
+      <button id="modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div id="modal-progress"></div>
+    <div id="modal-volumes" class="volumes"></div>
+  </div>
+</div>
+
+<script src="app.js" defer></script>
+</body>
+</html>

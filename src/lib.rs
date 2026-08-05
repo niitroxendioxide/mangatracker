@@ -8,7 +8,7 @@ pub fn seed_db(conn: &mut Connection) -> rusqlite::Result<()> {
     let mut new_manga = MangaEntry::new("Kagurabachi", 11, 0.0, None);
     new_manga.init(conn)?;
 
-    let mut new_manga = MangaEntry::new("Nana", 21, 11000.0, None);
+    let mut new_manga = MangaEntry::new("NANA", 21, 11000.0, None);
     new_manga.init(conn)?;
 
     let mut new_manga = MangaEntry::new("Death Note", 12, 10500.0, None);

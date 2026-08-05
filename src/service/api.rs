@@ -11,8 +11,10 @@ use super::query::{MangaResponse,
     build_manga_data, 
     get_manga_by_id, 
     create_response_with_manga, 
-    get_all_manga_responses
+    get_all_manga_responses,
 };
+
+use super::fetch_cover_url;
 
 // structures
 
@@ -52,23 +54,29 @@ pub async fn get_all_manga(State(conn): State<SharedConn>) -> Result<Json<Vec<Ma
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
 
+#[axum::debug_handler]
 pub async fn add_manga(
     State(conn): State<SharedConn>,
     Json(payload): Json<CreateMangaRequest>,
 ) -> Result<Json<MangaResponse>, StatusCode> {
+    let cover_url = match fetch_cover_url(&payload.name).await {
+        Ok(t) => t,
+        Err(_) => None,
+    };
+
     let mut conn = conn.lock().unwrap();
     let price: f64 = match payload.last_price {
         Some(price_value) => price_value,
         None => 0.0,
     };
 
-    let mut new_manga = MangaEntry::new(&payload.name, payload.volume_count, price, None);
+    let mut new_manga = MangaEntry::new(&payload.name, payload.volume_count, price, cover_url);
     new_manga.init(&mut conn).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     match create_response_with_manga(&conn, &mut new_manga) {
         Ok(Some(manga)) => Ok(Json(manga)),
         Ok(None) => Err(axum::http::StatusCode::NOT_FOUND),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+        Err(_) => Err(axum::http::StatusCode::IM_A_TEAPOT),
     }
 }
 
@@ -95,3 +103,61 @@ pub async fn update_volume(
 
     Ok(StatusCode::OK)
 }
+
+/*
+async fn fetch_cover(
+    State(conn): State<SharedConn>,
+    Path(id): Path<i64>,
+) -> Result<StatusCode, StatusCode> {
+    let manga = {
+        let conn = conn.lock().unwrap();
+        match get_manga_by_id(&conn, id) {
+            Ok(Some(manga)) => manga,
+            Ok(None) => return Err(StatusCode::NOT_FOUND),
+            Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+        }
+    };
+
+    let cover_url = fetch_cover_url(&manga.name)
+        .await
+        .map_err(|_| StatusCode::BAD_GATEWAY)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    let conn = conn.lock().unwrap();
+
+    match manga.set_cover(&conn, &cover_url) {
+        Ok(_) => return Ok(StatusCode::OK),
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR)
+    }
+}
+
+*/
+/*async fn fetch_cover(
+    State(conn): State<SharedConn>,
+    Path(id): Path<i64>,
+) -> Result<StatusCode, StatusCode> {
+    let manga = {
+        let conn = conn.lock().unwrap();
+        match get_manga_by_id(&conn, id) {
+            Ok(Some(manga)) => manga,
+            Ok(None) => return Err(StatusCode::NOT_FOUND),
+            Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+        }
+    }; // lock is dropped here, before the .await below
+
+    let bytes = fetch_cover_bytes(&manga.name)
+        .await
+        .map_err(|_| StatusCode::BAD_GATEWAY)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    let filename = format!("{}.jpg", id);
+    tokio::fs::write(format!("covers/{}", filename), &bytes)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let conn = conn.lock().unwrap();
+    match manga.set_cover(&conn, &filename) {
+        Ok(_) => return Ok(StatusCode::OK),
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR)
+    }
+}*/

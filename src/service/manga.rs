@@ -42,18 +42,22 @@ impl MangaEntry {
 
     pub fn save(&self, conn: &Connection) -> rusqlite::Result<()> {
         let store_query_res = self.is_stored(&conn);
-        
+        let cover_image_path = match &self.cover_path {
+            Some(new_cover) => new_cover,
+            None => "",
+        };
+
         match store_query_res {
             Ok(is_stored) => {
                 if is_stored {
                     conn.execute(
-                        "UPDATE Mangas SET volume_count = ?2, last_price = ?3 WHERE name = ?1",
-                        (&self.name, &self.volume_count, &self.last_price),
+                        "UPDATE Mangas SET volume_count = ?2, last_price = ?3, cover_image_path=?4 WHERE name = ?1",
+                        (&self.name, &self.volume_count, &self.last_price, &cover_image_path),
                     )?;
                 } else {
                     conn.execute(
-                        "INSERT INTO Mangas (name, volume_count, last_price) VALUES (?1, ?2, ?3)",
-                        (&self.name, &self.volume_count, &self.last_price),
+                        "INSERT INTO Mangas (name, volume_count, last_price, cover_image_path) VALUES (?1, ?2, ?3, ?4)",
+                        (&self.name, &self.volume_count, &self.last_price, &cover_image_path),
                     )?;
                 }
 

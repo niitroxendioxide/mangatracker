@@ -6,6 +6,7 @@ use serde::Serialize;
 pub struct MangaResponse {
     pub id: i64,
     pub name: String,
+    pub last_price: f64,
     pub volume_count: i64,
     pub owned_volumes: Vec<i64>,
     pub cover_image_path: Option<String>,
@@ -28,7 +29,8 @@ pub fn create_response_with_manga(conn: &Connection, manga: &mut MangaEntry) -> 
         name: manga.name.clone(),
         volume_count: manga.volume_count,
         owned_volumes,
-        cover_image_path: manga.cover_path.clone()
+        cover_image_path: manga.cover_path.clone(),
+        last_price: manga.last_price,
     }))
 }
 
@@ -48,7 +50,8 @@ pub fn build_manga_data(conn: &Connection, id: i64) -> Result<Option<MangaRespon
         name: manga.name,
         volume_count: manga.volume_count,
         owned_volumes,
-        cover_image_path: manga.cover_path.clone()
+        cover_image_path: manga.cover_path.clone(),
+        last_price: manga.last_price,
     }))
 }
 
@@ -68,7 +71,8 @@ pub fn get_all_manga_responses(conn: &Connection) -> Result<Vec<MangaResponse>> 
             name: manga.name,
             volume_count: manga.volume_count,
             owned_volumes,
-            cover_image_path: manga.cover_path.clone()
+            cover_image_path: manga.cover_path.clone(),
+            last_price: manga.last_price,
         });
     }
 
