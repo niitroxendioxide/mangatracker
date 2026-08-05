@@ -5,7 +5,7 @@ use axum::{
 };
 use std::sync::{Arc, Mutex};
 use serde::Deserialize;
-use crate::service::MangaEntry;
+use crate::service::{MangaEntry, query::get_manga_by_name};
 
 use super::query::{MangaResponse, 
     build_manga_data, 
@@ -15,6 +15,8 @@ use super::query::{MangaResponse,
 };
 
 use super::fetch_cover_url;
+
+pub const PRICE_LIMIT: f64 = 10_000_000.0;
 
 // structures
 
@@ -28,6 +30,12 @@ pub struct UpdateVolumeRequest {
 pub struct CreateMangaRequest {
     pub name: String,
     pub volume_count: i64,
+    pub last_price: Option<f64>,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateMangaRequest {
+    pub volume_count: Option<i64>,
     pub last_price: Option<f64>,
 }
 
@@ -65,10 +73,15 @@ pub async fn add_manga(
     };
 
     let mut conn = conn.lock().unwrap();
-    let price: f64 = match payload.last_price {
-        Some(price_value) => price_value,
-        None => 0.0,
-    };
+    if let Ok(Some(_)) = get_manga_by_name(&conn, &payload.name) {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    let price = payload
+        .last_price
+        .unwrap_or(0.0)
+        .max(0.0)
+        .min(PRICE_LIMIT);
 
     let mut new_manga = MangaEntry::new(&payload.name, payload.volume_count, price, cover_url);
     new_manga.init(&mut conn).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -76,7 +89,48 @@ pub async fn add_manga(
     match create_response_with_manga(&conn, &mut new_manga) {
         Ok(Some(manga)) => Ok(Json(manga)),
         Ok(None) => Err(axum::http::StatusCode::NOT_FOUND),
-        Err(_) => Err(axum::http::StatusCode::IM_A_TEAPOT),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[axum::debug_handler]
+pub async fn update_manga(
+    State(conn): State<SharedConn>,
+    Path(id): Path<i64>,
+    Json(payload): Json<UpdateMangaRequest>,
+) -> Result<Json<MangaResponse>, StatusCode> {
+
+    let mut conn = conn.lock().unwrap();
+    let mut obtained_manga = match get_manga_by_id(&conn, id) {
+        Ok(Some(manga)) => manga,
+        Ok(None) => return Err(axum::http::StatusCode::NOT_FOUND),
+        Err(_) => return Err(axum::http::StatusCode::IM_A_TEAPOT),
+    };
+
+    if let Some(mut new_price) = payload.last_price {
+        if new_price >= PRICE_LIMIT {
+            new_price = PRICE_LIMIT;
+        }
+
+        obtained_manga.edit_last_price(new_price);
+    }
+
+    if let Some(new_volume_count) = payload.volume_count {
+        match obtained_manga.set_volume_count(&mut conn, new_volume_count) {
+            Ok(_) => (),
+            Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+
+    match obtained_manga.save(&conn) {
+        Ok(_) => (),
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR)
+    }
+    
+    match create_response_with_manga(&conn, &mut obtained_manga) {
+        Ok(Some(manga)) => Ok(Json(manga)),
+        Ok(None) => Err(axum::http::StatusCode::NOT_FOUND),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
 

@@ -2,10 +2,10 @@ pub mod service;
 pub mod db;
 
 use rusqlite::Connection;
-use service::{MangaEntry};
+//use service::{MangaEntry};
 
-pub fn seed_db(conn: &mut Connection) -> rusqlite::Result<()> {
-    let mut new_manga = MangaEntry::new("Kagurabachi", 11, 0.0, None);
+pub fn seed_db(_conn: &mut Connection) -> rusqlite::Result<()> {
+    /*let mut new_manga = MangaEntry::new("Kagurabachi", 11, 0.0, None);
     new_manga.init(conn)?;
 
     let mut new_manga = MangaEntry::new("NANA", 21, 11000.0, None);
@@ -21,7 +21,7 @@ pub fn seed_db(conn: &mut Connection) -> rusqlite::Result<()> {
     new_manga.init(conn)?;
 
     let mut new_manga = MangaEntry::new("Jigokuraku", 13, 0.0, None);
-    new_manga.init(conn)?;
+    new_manga.init(conn)?; */
 
     Ok(())
 }

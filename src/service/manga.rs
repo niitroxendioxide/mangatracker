@@ -40,6 +40,64 @@ impl MangaEntry {
         self.last_price = new_price;
     }
 
+    pub fn set_volume_count(&mut self, conn: &mut Connection, new_count: i64) -> sqResult<()> {
+        if new_count == self.volume_count || new_count < 1 {
+            return Ok(());
+        }
+
+        let manga_id = match self.get_id(conn)? {
+            Some(id) => id,
+            None => return Err(rusqlite::Error::QueryReturnedNoRows),
+        };
+
+        let old_count = self.volume_count;
+        let tx = conn.transaction()?;
+
+        if new_count > old_count {
+            let mut stmt = tx.prepare(
+                "INSERT OR IGNORE INTO Volumes (manga_id, volume_number, owned, bought_price)
+                 VALUES (?1, ?2, ?3, ?4)",
+            )?;
+
+            for vol in (old_count + 1)..=new_count {
+                stmt.execute(params![manga_id, vol, false, 0.0])?;
+            }
+        } else {
+            tx.execute(
+                "DELETE FROM Volumes WHERE manga_id = ?1 AND volume_number > ?2",
+                params![manga_id, new_count],
+            )?;
+        }
+
+        tx.execute(
+            "UPDATE Mangas SET volume_count = ?1 WHERE id = ?2",
+            params![new_count, manga_id],
+        )?;
+
+        tx.commit()?;
+
+        self.volume_count = new_count;
+
+        if new_count < old_count {
+            self.volumes.retain(|&vol_num, _| vol_num <= new_count);
+        }
+
+        Ok(())
+    }
+
+    pub fn update_metadata(&mut self, conn: &mut Connection, new_count: i64, new_price: f64) -> sqResult<()> {
+        self.edit_last_price(new_price);
+        
+        conn.execute(
+            "UPDATE Mangas SET last_price = ?1 WHERE name = ?2",
+            params![self.last_price, &self.name],
+        )?;
+
+        self.set_volume_count(conn, new_count)?;
+
+        Ok(())
+    }
+
     pub fn save(&self, conn: &Connection) -> rusqlite::Result<()> {
         let store_query_res = self.is_stored(&conn);
         let cover_image_path = match &self.cover_path {

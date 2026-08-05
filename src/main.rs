@@ -1,7 +1,7 @@
 // Dependencies/libraries loaded
 
 use tower_http::services::ServeFile;
-use tower_http::{cors::CorsLayer, services::ServeDir};
+use tower_http::{cors::CorsLayer};
 use axum::{routing::get, routing::post,Router,};
 use std::sync::{Arc, Mutex};
 use mangatracker::db;
@@ -24,9 +24,9 @@ async fn main() {
     let app = Router::new()
     .route("/manga/{id}", get(api::get_manga))
     .route("/manga/create", post(api::add_manga))
-    .route("/manga/update/{id}", post(api::update_volume))
+    .route("/manga/update_volume/{id}", post(api::update_volume))
+    .route("/manga/update/{id}", post(api::update_manga))
     .route("/manga", get(api::get_all_manga))
-    .nest_service("/covers", ServeDir::new("covers"))
     .route_service("/", ServeFile::new("frontend/index.html"))
     .route_service("/app.js", ServeFile::new("frontend/app.js"))
     .layer(CorsLayer::permissive())
