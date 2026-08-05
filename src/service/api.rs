@@ -74,7 +74,7 @@ pub async fn add_manga(
 
     let mut conn = conn.lock().unwrap();
     if let Ok(Some(_)) = get_manga_by_name(&conn, &payload.name) {
-        return Err(StatusCode::FORBIDDEN);
+        return Err(StatusCode::CONFLICT);
     }
 
     let price = payload
