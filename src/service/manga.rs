@@ -98,21 +98,33 @@ impl MangaEntry {
         Ok(())
     }
 
-    pub fn save(&self, conn: &Connection) -> rusqlite::Result<()> {
+    pub fn save(&mut self, conn: &Connection) -> rusqlite::Result<()> {
         let store_query_res = self.is_stored(&conn);
-        let cover_image_path = match &self.cover_path {
-            Some(new_cover) => new_cover,
-            None => "",
-        };
 
         match store_query_res {
             Ok(is_stored) => {
                 if is_stored {
+                    let manga_id = match self.get_id(conn) {
+                        Ok(Some(id)) => id,
+                        Ok(None) => return Err(rusqlite::Error::InvalidParameterName("Id is null".to_owned())),
+                        Err(_) => return Err(rusqlite::Error::InvalidQuery)
+                    };
+
+                    let cover_image_path = match &self.cover_path {
+                        Some(new_cover) => new_cover,
+                        None => "",
+                    };
+                    
                     conn.execute(
-                        "UPDATE Mangas SET volume_count = ?2, last_price = ?3, cover_image_path=?4 WHERE name = ?1",
-                        (&self.name, &self.volume_count, &self.last_price, &cover_image_path),
+                        "UPDATE Mangas SET volume_count = ?2, last_price = ?3, cover_image_path=?4 WHERE id = ?1",
+                        (manga_id, &self.volume_count, &self.last_price, &cover_image_path),
                     )?;
                 } else {
+                    let cover_image_path = match &self.cover_path {
+                        Some(new_cover) => new_cover,
+                        None => "",
+                    };
+                    
                     conn.execute(
                         "INSERT INTO Mangas (name, volume_count, last_price, cover_image_path) VALUES (?1, ?2, ?3, ?4)",
                         (&self.name, &self.volume_count, &self.last_price, &cover_image_path),
