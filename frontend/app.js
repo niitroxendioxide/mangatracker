@@ -14,6 +14,7 @@ const modalCloseEl = document.getElementById("modal-close");
 const modalVolCountInput = document.getElementById("modal-volume-count");
 const modalPriceInput = document.getElementById("modal-price");
 const modalSaveBtn = document.getElementById("modal-save-btn");
+const modalDeleteBtn = document.getElementById("modal-delete-btn");
 
 let currentManga = null; // the manga object currently open in the modal
 
@@ -47,7 +48,6 @@ async function setVolumeOwned(mangaId, volume, state) {
   if (!res.ok) throw new Error(`Failed to update (${res.status})`);
 }
 
-// New API function to update metadata (volume count & price)
 async function updateMangaMetadata(mangaId, volumeCount, price) {
   const res = await fetch(`${API_BASE}/manga/update/${mangaId}`, {
     method: "POST", // or PUT depending on your Axum route
@@ -58,7 +58,13 @@ async function updateMangaMetadata(mangaId, volumeCount, price) {
   return res.json();
 }
 
-// --- Grid tile ---
+async function deleteMangaWithId(mangaId) {
+  const res = await fetch(`${API_BASE}/manga/delete/${mangaId}`, {
+    method: "POST", 
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) throw new Error(`Failed to delete manga (${res.status})`);
+}
 
 function renderTile(manga) {
   const tile = document.createElement("button");
@@ -157,6 +163,22 @@ async function onToggleVolume(volumeNumber, vEl) {
   }
 }
 
+if (modalDeleteBtn) {
+  modalDeleteBtn.addEventListener("click", async () => {
+    if (!currentManga) return;
+
+    try {
+      await deleteMangaWithId(currentManga.id);
+
+      setStatus("Manga eliminado correctamente");
+      
+      loadAndRender();
+    } catch (err) {
+      setStatus(err.message, true);
+    }
+  })
+}
+
 // Save edited volume count & price
 if (modalSaveBtn) {
   modalSaveBtn.addEventListener("click", async () => {
@@ -170,11 +192,9 @@ if (modalSaveBtn) {
     try {
       await updateMangaMetadata(currentManga.id, newVolumeCount, newPrice);
 
-      // Update local object
       currentManga.volume_count = newVolumeCount;
       currentManga.last_price = newPrice;
 
-      // Filter out owned volumes higher than the new total count
       currentManga.owned_volumes = currentManga.owned_volumes.filter(
         v => v <= newVolumeCount
       );
@@ -182,7 +202,6 @@ if (modalSaveBtn) {
       updateModalProgress();
       renderModalVolumes();
 
-      // Refresh background grid tile to display new values
       const existingTile = [...gridEl.children].find(
         t => t.dataset.mangaId == currentManga.id
       );

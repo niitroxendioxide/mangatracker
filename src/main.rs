@@ -27,6 +27,7 @@ async fn main() {
     .route("/manga/update_volume/{id}", post(api::update_volume))
     .route("/manga/update/{id}", post(api::update_manga))
     .route("/manga", get(api::get_all_manga))
+    .route("/manga/delete/{id}", post(api::remove_manga))
     .route_service("/", ServeFile::new("frontend/index.html"))
     .route_service("/app.js", ServeFile::new("frontend/app.js"))
     .layer(CorsLayer::permissive())

@@ -158,60 +158,20 @@ pub async fn update_volume(
     Ok(StatusCode::OK)
 }
 
-/*
-async fn fetch_cover(
+pub async fn remove_manga(
     State(conn): State<SharedConn>,
     Path(id): Path<i64>,
 ) -> Result<StatusCode, StatusCode> {
-    let manga = {
-        let conn = conn.lock().unwrap();
-        match get_manga_by_id(&conn, id) {
-            Ok(Some(manga)) => manga,
-            Ok(None) => return Err(StatusCode::NOT_FOUND),
-            Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
-        }
-    };
-
-    let cover_url = fetch_cover_url(&manga.name)
-        .await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?
-        .ok_or(StatusCode::NOT_FOUND)?;
-
     let conn = conn.lock().unwrap();
 
-    match manga.set_cover(&conn, &cover_url) {
+    let mut manga = match get_manga_by_id(&conn, id) {
+        Ok(Some(m)) => m,
+        Ok(None) => return Err(StatusCode::NOT_FOUND),
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+
+    match manga.delete(&conn) {
         Ok(_) => return Ok(StatusCode::OK),
         Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR)
     }
 }
-
-*/
-/*async fn fetch_cover(
-    State(conn): State<SharedConn>,
-    Path(id): Path<i64>,
-) -> Result<StatusCode, StatusCode> {
-    let manga = {
-        let conn = conn.lock().unwrap();
-        match get_manga_by_id(&conn, id) {
-            Ok(Some(manga)) => manga,
-            Ok(None) => return Err(StatusCode::NOT_FOUND),
-            Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
-        }
-    }; // lock is dropped here, before the .await below
-
-    let bytes = fetch_cover_bytes(&manga.name)
-        .await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?
-        .ok_or(StatusCode::NOT_FOUND)?;
-
-    let filename = format!("{}.jpg", id);
-    tokio::fs::write(format!("covers/{}", filename), &bytes)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let conn = conn.lock().unwrap();
-    match manga.set_cover(&conn, &filename) {
-        Ok(_) => return Ok(StatusCode::OK),
-        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR)
-    }
-}*/

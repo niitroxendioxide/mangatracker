@@ -126,6 +126,21 @@ impl MangaEntry {
         Ok(())
     }
 
+    pub fn delete(&mut self, conn: &Connection) -> rusqlite::Result<()> {
+        let id = match self.get_id(conn) {
+            Ok(Some(id)) => id,
+            Ok(None) => return Err(rusqlite::Error::InvalidParameterName("Id is null".to_owned())),
+            Err(_) => return Err(rusqlite::Error::InvalidQuery)
+        };
+
+        conn.execute(
+            "DELETE FROM Mangas WHERE id = ?1",
+            params![id],
+        )?;
+
+        Ok(())
+    }
+
     pub fn set_cover(&self, conn: &Connection, new_path: &str) -> rusqlite::Result<()> {
         let id = self.id;
 
